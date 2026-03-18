@@ -145,7 +145,7 @@ app.post('/api/parse', async (req, res) => {
     // Axios HTTP errors from the target site
     if (err.response) {
       const status = err.response.status;
-      if (status === 403 || status === 401) {
+      if (status === 401 || status === 402 || status === 403) {
         return res
           .status(422)
           .json({ error: 'This site blocked our request — it may have a paywall.' });
