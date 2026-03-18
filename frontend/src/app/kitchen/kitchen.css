@@ -10,6 +10,7 @@
 .kitchen-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: 1rem 1.5rem;
   border-bottom: 1px solid rgba(255,255,255,0.06);
   background: rgba(26,26,26,0.8);
@@ -50,7 +51,9 @@
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  margin-right: 1rem;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .media-toggle {
@@ -75,7 +78,7 @@
 }
 
 .header-spacer {
-  flex: 1;
+  display: none;
 }
 
 /* ─── Layout ──────────────────────────────────────────────────────── */
