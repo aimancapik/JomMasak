@@ -1,0 +1,290 @@
+@if (recipe) {
+  <div class="kitchen-root">
+
+    <!-- Top bar -->
+    <header class="kitchen-header">
+      <button class="back-btn" (click)="goHome()" id="backHomeBtn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M19 12H5M12 5l-7 7 7 7"/>
+        </svg>
+        New Recipe
+      </button>
+      <span class="header-brand">JomMasak</span>
+      <div class="header-spacer"></div>
+      <button class="media-toggle" (click)="toggleMedia()" [title]="showMedia() ? 'Hide Media' : 'Show Media'">
+        @if (showMedia()) {
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+          </svg>
+        } @else {
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="2" x2="22" y1="2" y2="22"/><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><path d="M10.457 10.457 9 11.914"/><path d="M15 11.012 14.513 11.5"/><path d="M15.42 15.42 16.5 14.34a2 2 0 0 0-2.828 0L9 19.012l-.9-.9"/><circle cx="9" cy="9" r="2"/>
+          </svg>
+        }
+      </button>
+    </header>
+
+    <!-- Main two-column layout -->
+    <div class="kitchen-layout">
+
+      <!-- ── LEFT PANEL ─────────────────────────────────────────── -->
+      <aside class="left-panel">
+
+        <!-- Hero Image -->
+        @if (recipe.image && !recipe.video?.url) {
+          <div class="recipe-image-wrap">
+            <img [src]="recipe.image" [alt]="recipe.title" class="recipe-image" />
+          </div>
+        }
+
+        <!-- Video Player (if available) -->
+        @if (recipe.video?.url) {
+          <div class="video-container">
+            <iframe
+              [src]="getSanitizedVideoUrl(recipe.video?.url ?? null)"
+              class="video-iframe"
+              frameborder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowfullscreen
+            ></iframe>
+          </div>
+        }
+
+        <!-- Title -->
+        <h1 class="recipe-title">{{ recipe.title }}</h1>
+
+        <!-- Meta chips -->
+        <div class="meta-chips">
+          @if (recipe.yield) {
+            <div class="chip">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+              {{ recipe.yield }}
+            </div>
+          }
+          @if (recipe.prepTime) {
+            <div class="chip">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+              Prep: {{ recipe.prepTime }}
+            </div>
+          }
+          @if (recipe.cookTime) {
+            <div class="chip chip--amber">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+              </svg>
+              Cook: {{ recipe.cookTime }}
+            </div>
+          }
+        </div>
+
+        <!-- Ingredients -->
+        <section class="ingredients-section">
+          <div class="ingredients-header">
+            <h2 class="section-heading">Ingredients</h2>
+            <div class="scale-toggle">
+              <button class="scale-btn" [class.scale-btn--active]="scale === 0.5" (click)="setScale(0.5)">½x</button>
+              <button class="scale-btn" [class.scale-btn--active]="scale === 1" (click)="setScale(1)">1x</button>
+              <button class="scale-btn" [class.scale-btn--active]="scale === 2" (click)="setScale(2)">2x</button>
+            </div>
+          </div>
+          
+          <ul class="ingredients-list">
+            @for (ingredient of recipe.ingredients; track $index) {
+              <li
+                class="ingredient-item"
+                [class.ingredient-item--checked]="isChecked($index)"
+                (click)="toggleIngredient($index)"
+                [attr.id]="'ingredient-' + $index"
+                role="checkbox"
+                [attr.aria-checked]="isChecked($index)"
+                tabindex="0"
+                (keydown.enter)="toggleIngredient($index)"
+                (keydown.space)="toggleIngredient($index)"
+              >
+                <span class="check-circle" [class.check-circle--done]="isChecked($index)">
+                  @if (isChecked($index)) {
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                  }
+                </span>
+                <span class="ingredient-text">{{ getScaledIngredient(ingredient) }}</span>
+              </li>
+            }
+          </ul>
+        </section>
+
+      </aside>
+
+      <!-- ── RIGHT PANEL ────────────────────────────────────────── -->
+      <main class="right-panel">
+
+        <h2 class="section-heading">Instructions</h2>
+
+        <!-- Done state -->
+        @if (isDone) {
+          <div class="done-state">
+            <div class="done-emoji">🎉</div>
+            <p class="done-text">Done! Enjoy your meal.</p>
+            <button class="restart-btn" (click)="currentStep.set(0)" id="restartBtn">
+              Start Over
+            </button>
+          </div>
+        } @else {
+          <!-- Steps list -->
+          <ol class="steps-list">
+            @for (step of recipe.instructions; track $index) {
+              <li
+                class="step-item"
+                (click)="openStepModal($index)"
+                [attr.id]="'step-' + $index"
+              >
+                <div class="step-card-content">
+                  <div class="step-badge">Step {{ $index + 1 }}</div>
+                  <p 
+                    class="step-text" 
+                    (click)="handleInstructionClick($event)"
+                    [innerHTML]="parseInstructions(step)"
+                  ></p>
+                </div>
+
+                @if (showMedia() && (step.image || step.video?.url)) {
+                  <div class="step-card-media">
+                    @if (step.video?.url) {
+                      <div class="step-video-preview">
+                        <img [src]="step.video?.thumbnail || step.image || 'assets/video-placeholder.png'" class="step-media-img">
+                        <div class="play-overlay">
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                        </div>
+                      </div>
+                    } @else if (step.image) {
+                      <img [src]="step.image" class="step-media-img">
+                    }
+                  </div>
+                }
+              </li>
+            }
+          </ol>
+        }
+
+      </main>
+    </div>
+
+    <!-- Step Focus Modal -->
+    @if (isModalMode()) {
+      <div class="step-modal-overlay" (click)="$event.target === $event.currentTarget && closeStepModal()">
+        <div class="step-modal">
+          <button class="modal-close" (click)="closeStepModal()">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+          </button>
+
+          <div class="modal-content">
+            <div class="modal-step-header">
+              <span class="modal-step-number">STEP {{ currentStep() + 1 }} OF {{ totalSteps }}</span>
+              <div class="modal-progress-bar">
+                <div class="modal-progress-fill" [style.width]="((currentStep() + 1) / totalSteps) * 100 + '%'"></div>
+              </div>
+            </div>
+
+            <div class="modal-body">
+              <div class="modal-instruction-wrap">
+                <p 
+                  class="modal-step-text" 
+                  (click)="handleInstructionClick($event)"
+                  [innerHTML]="parseInstructions(recipe.instructions[currentStep()])"
+                ></p>
+
+                @if (showMedia() && (recipe.instructions[currentStep()].image || recipe.instructions[currentStep()].video?.url)) {
+                  <div class="modal-step-media">
+                    @if (recipe.instructions[currentStep()].video?.url) {
+                      <div class="modal-video-container">
+                        <iframe
+                          [src]="getSanitizedVideoUrl(recipe.instructions[currentStep()].video?.url ?? null)"
+                          class="modal-video-iframe"
+                          frameborder="0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowfullscreen
+                        ></iframe>
+                      </div>
+                    } @else if (recipe.instructions[currentStep()].image) {
+                      <img [src]="recipe.instructions[currentStep()].image" class="modal-step-img">
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+
+            <div class="modal-nav">
+              <button 
+                class="modal-nav-btn" 
+                (click)="prevStep()" 
+                [disabled]="currentStep() === 0"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <path d="M19 12H5M12 5l-7 7 7 7"/>
+                </svg>
+                Prev
+              </button>
+
+              <button 
+                class="modal-nav-btn modal-nav-btn--primary" 
+                (click)="currentStep() === totalSteps - 1 ? closeStepModal() : nextStep()"
+              >
+                {{ currentStep() === totalSteps - 1 ? 'Finish!' : 'Next' }}
+                @if (currentStep() < totalSteps - 1) {
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                  </svg>
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Active Timers Overlay -->
+    @if (timers().length > 0) {
+      <div class="timer-overlay">
+        @for (timer of timers(); track timer.id) {
+          <div class="timer-card" [class.timer-card--ended]="timer.status === 'ended'">
+            <div class="timer-ring-wrap">
+              <svg class="timer-ring" width="36" height="36">
+                <circle cx="18" cy="18" r="16" class="timer-ring-bg"></circle>
+                <circle 
+                  cx="18" cy="18" r="16" 
+                  class="timer-ring-progress"
+                  [style.stroke-dashoffset]="100 - getTimerProgress(timer)"
+                ></circle>
+              </svg>
+              @if (timer.status === 'ended') {
+                <div class="timer-icon--ended">⏰</div>
+              }
+            </div>
+            
+            <div class="timer-content">
+              <div class="timer-label">{{ timer.label }}</div>
+              <div class="timer-countdown">{{ formatTime(timer.remainingSeconds) }}</div>
+            </div>
+
+            <button class="timer-close" (click)="removeTimer(timer.id)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M18 6L6 18M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+        }
+      </div>
+    }
+
+  </div>
+}
