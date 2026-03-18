@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "start": "echo 'This project is split into \"backend\" and \"frontend\" subfolders. Please run them separately:' && echo '1. Backend: cd backend && npm install && npm start' && echo '2. Frontend: cd frontend && npm install && npm start'",
-    "install:all": "cd backend && npm install && cd .. && cd frontend && npm install"
+    "install:all": "cd backend && npm install && cd .. && cd frontend && npm install",
+    "vercel-build": "cd frontend && npm install && npm run build"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
