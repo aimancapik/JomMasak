@@ -23,26 +23,47 @@ function parseIsoDuration(iso) {
 }
 
 // ─── Helper: Normalize Video URLs to Embed Format ───────────────────────────
-function normalizeVideoUrl(rawUrl) {
+function normalizeVideoUrl(rawUrl, baseUrl) {
   if (!rawUrl) return null;
+  
+  let url = rawUrl;
+  // Resolve relative URLs first
+  if (url.startsWith('/')) {
+    try {
+      const base = new URL(baseUrl);
+      url = `${base.protocol}//${base.host}${url}`;
+    } catch (e) {}
+  }
 
   // Handle YouTube
-  if (rawUrl.includes('youtube.com/watch') || rawUrl.includes('youtu.be/')) {
-    const videoIdMatch = rawUrl.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/);
+  if (url.includes('youtube.com/watch') || url.includes('youtu.be/')) {
+    const videoIdMatch = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/);
     if (videoIdMatch) {
       return `https://www.youtube.com/embed/${videoIdMatch[1]}`;
     }
   }
 
   // Handle Vimeo (standard URLs to player.vimeo.com)
-  if (rawUrl.includes('vimeo.com') && !rawUrl.includes('player.vimeo.com')) {
-    const vimeoIdMatch = rawUrl.match(/vimeo\.com(?:\/video)?\/(\d+)/);
+  if (url.includes('vimeo.com') && !url.includes('player.vimeo.com')) {
+    const vimeoIdMatch = url.match(/vimeo\.com(?:\/video)?\/(\d+)/);
     if (vimeoIdMatch) {
       return `https://player.vimeo.com/video/${vimeoIdMatch[1]}`;
     }
   }
 
-  return rawUrl;
+  return url;
+}
+
+// ─── Helper: Resolve Relative Images ────────────────────────────────────────
+function resolveUrl(url, baseUrl) {
+  if (!url) return null;
+  if (url.startsWith('http')) return url;
+  try {
+    const base = new URL(baseUrl);
+    return `${base.protocol}//${base.host}${url.startsWith('/') ? url : '/' + url}`;
+  } catch (e) {
+    return url;
+  }
 }
 
 // ─── Core Scraper ────────────────────────────────────────────────────────────
@@ -91,6 +112,7 @@ async function scrapeRecipe(url) {
   let image = recipeData.image;
   if (Array.isArray(image)) image = image[0];
   if (image && typeof image === 'object') image = image.url || image['@id'] || null;
+  image = resolveUrl(image, url);
 
   // Normalise instructions with media support
   const rawInstructions = recipeData.recipeInstructions || [];
@@ -110,10 +132,10 @@ async function scrapeRecipe(url) {
 
         return { 
           text: step.text || '',
-          image: stepImg || null,
+          image: resolveUrl(stepImg, url),
           video: step.video ? {
-            url: normalizeVideoUrl(step.video.contentUrl || step.video.embedUrl || null),
-            thumbnail: step.video.thumbnailUrl || null
+            url: normalizeVideoUrl(step.video.contentUrl || step.video.embedUrl || null, url),
+            thumbnail: resolveUrl(step.video.thumbnailUrl || null, url)
           } : null
         };
       });
@@ -126,10 +148,10 @@ async function scrapeRecipe(url) {
 
     return [{ 
       text: item.text || '',
-      image: stepImg || null,
+      image: resolveUrl(stepImg, url),
       video: item.video ? {
-        url: normalizeVideoUrl(item.video.contentUrl || item.video.embedUrl || null),
-        thumbnail: item.video.thumbnailUrl || null
+        url: normalizeVideoUrl(item.video.contentUrl || item.video.embedUrl || null, url),
+        thumbnail: resolveUrl(item.video.thumbnailUrl || null, url)
       } : null
     }];
   });
@@ -147,11 +169,12 @@ async function scrapeRecipe(url) {
     prepTime: parseIsoDuration(recipeData.prepTime),
     cookTime: parseIsoDuration(recipeData.cookTime),
     video: videoData && typeof videoData === 'object' ? {
-      url: normalizeVideoUrl(videoData.contentUrl || videoData.embedUrl || null),
-      thumbnail: videoData.thumbnailUrl || null
+      url: normalizeVideoUrl(videoData.contentUrl || videoData.embedUrl || null, url),
+      thumbnail: resolveUrl(videoData.thumbnailUrl || null, url)
     } : null
   };
 }
+
 
 // ─── POST /api/parse ─────────────────────────────────────────────────────────
 app.post('/api/parse', async (req, res) => {

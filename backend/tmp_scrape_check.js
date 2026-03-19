@@ -17,7 +17,6 @@ async function scrapeRecipe(url) {
   const { data } = await axios.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
   const $ = cheerio.load(data);
   let recipeData = null;
-  const videoObjects = new Map();
 
   $('script[type="application/ld+json"]').each((i, el) => {
     try {
@@ -25,10 +24,6 @@ async function scrapeRecipe(url) {
       const traverse = (obj) => {
         if (!obj || typeof obj !== 'object') return;
         if (obj['@type'] === 'Recipe') recipeData = obj;
-        if (obj['@type'] === 'VideoObject') {
-          const id = obj['@id'] || obj.url;
-          if (id) videoObjects.set(id, obj);
-        }
         if (Array.isArray(obj)) obj.forEach(traverse);
         else Object.values(obj).forEach(val => { if (typeof val === 'object') traverse(val); });
       };
@@ -38,26 +33,13 @@ async function scrapeRecipe(url) {
 
   if (!recipeData) throw new Error('NO_RECIPE_DATA');
 
-  const rawInstructions = recipeData.recipeInstructions || [];
-  const instructions = rawInstructions.flatMap((item) => {
-    if (typeof item === 'string') return [{ text: item }];
-    if (item['@type'] === 'HowToSection') {
-      return (item.itemListElement || []).map((step) => {
-        return { 
-          text: step.text || '',
-          video: step.video ? { url: step.video.contentUrl || step.video.embedUrl || null } : null
-        };
-      });
-    }
-    return [{ 
-      text: item.text || '',
-      video: item.video ? { url: item.video.contentUrl || item.video.embedUrl || null } : null
-    }];
-  });
+  let image = recipeData.image;
+  if (Array.isArray(image)) image = image[0];
+  if (image && typeof image === 'object') image = image.url || image['@id'] || null;
 
-  return instructions;
+  return { title: recipeData.name, image };
 }
 
-scrapeRecipe('https://pinchofyum.com/sheet-pan-chicken-pitas')
+scrapeRecipe('https://www.maggi.my/ms/resipi/ayam-masak-merah-2')
   .then(res => console.log(JSON.stringify(res, null, 2)))
   .catch(console.error);
