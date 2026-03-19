@@ -22,6 +22,29 @@ function parseIsoDuration(iso) {
   return null;
 }
 
+// ─── Helper: Normalize Video URLs to Embed Format ───────────────────────────
+function normalizeVideoUrl(rawUrl) {
+  if (!rawUrl) return null;
+
+  // Handle YouTube
+  if (rawUrl.includes('youtube.com/watch') || rawUrl.includes('youtu.be/')) {
+    const videoIdMatch = rawUrl.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/);
+    if (videoIdMatch) {
+      return `https://www.youtube.com/embed/${videoIdMatch[1]}`;
+    }
+  }
+
+  // Handle Vimeo (standard URLs to player.vimeo.com)
+  if (rawUrl.includes('vimeo.com') && !rawUrl.includes('player.vimeo.com')) {
+    const vimeoIdMatch = rawUrl.match(/vimeo\.com(?:\/video)?\/(\d+)/);
+    if (vimeoIdMatch) {
+      return `https://player.vimeo.com/video/${vimeoIdMatch[1]}`;
+    }
+  }
+
+  return rawUrl;
+}
+
 // ─── Core Scraper ────────────────────────────────────────────────────────────
 async function scrapeRecipe(url) {
   const { data } = await axios.get(url, {
@@ -89,7 +112,7 @@ async function scrapeRecipe(url) {
           text: step.text || '',
           image: stepImg || null,
           video: step.video ? {
-            url: step.video.contentUrl || step.video.embedUrl || null,
+            url: normalizeVideoUrl(step.video.contentUrl || step.video.embedUrl || null),
             thumbnail: step.video.thumbnailUrl || null
           } : null
         };
@@ -105,7 +128,7 @@ async function scrapeRecipe(url) {
       text: item.text || '',
       image: stepImg || null,
       video: item.video ? {
-        url: item.video.contentUrl || item.video.embedUrl || null,
+        url: normalizeVideoUrl(item.video.contentUrl || item.video.embedUrl || null),
         thumbnail: item.video.thumbnailUrl || null
       } : null
     }];
@@ -124,7 +147,7 @@ async function scrapeRecipe(url) {
     prepTime: parseIsoDuration(recipeData.prepTime),
     cookTime: parseIsoDuration(recipeData.cookTime),
     video: videoData && typeof videoData === 'object' ? {
-      url: videoData.contentUrl || videoData.embedUrl || null,
+      url: normalizeVideoUrl(videoData.contentUrl || videoData.embedUrl || null),
       thumbnail: videoData.thumbnailUrl || null
     } : null
   };

@@ -19,12 +19,35 @@ export interface ActiveTimer {
   styleUrl: './kitchen.css',
 })
 export class KitchenComponent implements OnInit {
-  currentStep = signal(0);
-  timers = signal<ActiveTimer[]>([]);
-  isModalMode = signal(false);
-  showMedia = signal(true);
-  private timerInterval: any;
-  private wakeLock: any = null;
+  // --- Signals for Reactive State Management ---
+  currentStep = signal(0);           // Tracks the current active recipe step
+  timers = signal<ActiveTimer[]>([]); // List of active countdown timers
+  isModalMode = signal(false);       // Controls visibility of the focused step modal
+  showPdfPreview = signal(false);    // Controls visibility of the PDF print preview
+  showMedia = signal(true);          // Toggle for showing/hiding images and videos
+
+  private timerInterval: any;        // Handle for the global 1s timer tick
+  private wakeLock: any = null;      // Keeps the screen on during cooking
+
+  /**
+   * Memoized video URL to prevent iframe flickering.
+   * Only re-evaluates when the recipe or current step changes.
+   */
+  activeVideoUrl = computed(() => {
+    const step = this.recipe?.instructions?.[this.currentStep()];
+    const url = step?.video?.url;
+    if (!url) return null;
+    return this.sanitizer.bypassSecurityTrustResourceUrl(url);
+  });
+
+  /**
+   * Memoized hero video URL for the sidebar.
+   */
+  mainVideoUrl = computed(() => {
+    const url = this.recipe?.video?.url;
+    if (!url) return null;
+    return this.sanitizer.bypassSecurityTrustResourceUrl(url);
+  });
 
   constructor(
     public recipeService: RecipeService,
@@ -32,19 +55,16 @@ export class KitchenComponent implements OnInit {
     private sanitizer: DomSanitizer
   ) {}
 
-  getSanitizedVideoUrl(url: string | null): SafeResourceUrl | null {
-    if (!url) return null;
-    return this.sanitizer.bypassSecurityTrustResourceUrl(url);
-  }
-
   ngOnInit(): void {
+    // Redirect home if no recipe is loaded
     if (!this.recipeService.recipeSignal()) {
       this.router.navigate(['/']);
     }
 
+    // Keep screen active
     this.requestWakeLock();
 
-    // Tick all timers every second
+    // Core Timer Loop: Ticks every second to update all active timers
     this.timerInterval = setInterval(() => {
       this.timers.update(list => 
         list.map(t => {
@@ -66,13 +86,16 @@ export class KitchenComponent implements OnInit {
     this.releaseWakeLock();
   }
 
+  /**
+   * Prevents the device from sleeping while the user is cooking.
+   */
   private async requestWakeLock() {
     try {
       if ('wakeLock' in navigator) {
         this.wakeLock = await (navigator as any).wakeLock.request('screen');
       }
     } catch (err) {
-      console.log('Wake Lock request failed');
+      console.log('Wake Lock request failed - screen may dim');
     }
   }
 
@@ -82,10 +105,12 @@ export class KitchenComponent implements OnInit {
     }
   }
 
+  // --- Modal & Navigation ---
+
   openStepModal(index: number): void {
     this.currentStep.set(index);
     this.isModalMode.set(true);
-    document.body.style.overflow = 'hidden'; // prevent background scroll
+    document.body.style.overflow = 'hidden'; // Stop background scrolling
   }
 
   closeStepModal(): void {
@@ -95,7 +120,7 @@ export class KitchenComponent implements OnInit {
 
   private playTimerSound(): void {
     const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-    audio.play().catch(() => {}); // ignore if user hasn't interacted
+    audio.play().catch(() => {}); // Browsers might block if no prior user interaction
   }
 
   get recipe() {
@@ -122,6 +147,8 @@ export class KitchenComponent implements OnInit {
     }
   }
 
+  // --- Ingredient Management ---
+
   isChecked(index: number): boolean {
     return this.recipeService.isChecked(index);
   }
@@ -134,7 +161,8 @@ export class KitchenComponent implements OnInit {
     this.router.navigate(['/']);
   }
 
-  // Scaling
+  // --- Scaling Logic ---
+
   get scale() { return this.recipeService.scale(); }
 
   setScale(s: number) {
@@ -149,14 +177,65 @@ export class KitchenComponent implements OnInit {
     this.showMedia.update(v => !v);
   }
 
+  // --- PDF Generation ---
+
+  openPdfPreview(): void {
+    this.showPdfPreview.set(true);
+    document.body.style.overflow = 'hidden';
+  }
+
+  closePdfPreview(): void {
+    this.showPdfPreview.set(false);
+    document.body.style.overflow = '';
+  }
+
+  getStepText(step: any): string {
+    return typeof step === 'string' ? step : (step.text || '');
+  }
+
+  /**
+   * Generates a high-quality PDF using html2pdf.js.
+   * Captures the hidden print-optimized preview element.
+   */
+  async generatePdf(): Promise<void> {
+    try {
+      // Dynamic import to keep initial bundle size small
+      // @ts-ignore
+      const html2pdfModule = await import('html2pdf.js');
+      const html2pdf = html2pdfModule.default || html2pdfModule;
+
+      const element = document.getElementById('pdf-content');
+      if (!element) return;
+
+      const titleForFile = this.recipe?.title ? this.recipe.title.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'recipe';
+
+      const opt: any = {
+        margin:       15,
+        filename:     `${titleForFile}.pdf`,
+        image:        { type: 'jpeg' as const, quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      await html2pdf().set(opt).from(element).save();
+      this.closePdfPreview();
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+    }
+  }
+
   range(n: number): number[] {
     return Array.from({ length: n }, (_, i) => i);
   }
 
-  // Timer Management
+  // --- Timer Regex & Parsing ---
+
+  /**
+   * Scans step text for time indicators (e.g. "10 mins") 
+   * and wraps them in interactive timer chips.
+   */
   parseInstructions(instruction: any): SafeHtml {
     const text = typeof instruction === 'string' ? instruction : (instruction.text || '');
-    // Regex for: "num minute(s)", "num hour(s)", "num-num minute(s)"
     const timeReg = /(\d+(?:[-–]\d+)?\s*(?:min|minute|hr|hour)s?)/gi;
     
     const html = text.replace(timeReg, (match: string) => {
@@ -166,6 +245,9 @@ export class KitchenComponent implements OnInit {
     return this.sanitizer.bypassSecurityTrustHtml(html);
   }
 
+  /**
+   * Handles clicks on instructions to check for timer chips.
+   */
   handleInstructionClick(event: MouseEvent): void {
     const target = event.target as HTMLElement;
     if (target.classList.contains('timer-chip')) {
@@ -174,8 +256,10 @@ export class KitchenComponent implements OnInit {
     }
   }
 
+  /**
+   * Parses time string and adds a new active timer to the list.
+   */
   createTimer(timeStr: string): void {
-    // Extract first number found
     const match = timeStr.match(/(\d+)/);
     if (!match) return;
     
@@ -184,7 +268,7 @@ export class KitchenComponent implements OnInit {
     
     const totalSeconds = isHour ? value * 3600 : value * 60;
     
-    // Check if duplicate
+    // Don't create duplicate active timers for the same label
     const existing = this.timers().find(t => t.label === timeStr && t.status !== 'ended');
     if (existing) return;
 

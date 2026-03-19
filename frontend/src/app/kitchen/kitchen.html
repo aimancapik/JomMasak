@@ -3,25 +3,38 @@
 
     <!-- Top bar -->
     <header class="kitchen-header">
-      <button class="back-btn" (click)="goHome()" id="backHomeBtn">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <path d="M19 12H5M12 5l-7 7 7 7"/>
-        </svg>
-        New Recipe
-      </button>
+      <div class="header-section start">
+        <button class="back-btn" (click)="goHome()" id="backHomeBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M19 12H5M12 5l-7 7 7 7"/>
+          </svg>
+          New Recipe
+        </button>
+      </div>
+
       <span class="header-brand">JomMasak</span>
-      <div class="header-spacer"></div>
-      <button class="media-toggle" (click)="toggleMedia()" [title]="showMedia() ? 'Hide Media' : 'Show Media'">
-        @if (showMedia()) {
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+
+      <div class="header-section end">
+        <button class="pdf-logo-btn" (click)="openPdfPreview()" title="Preview PDF" id="downloadPdfBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
           </svg>
-        } @else {
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="2" x2="22" y1="2" y2="22"/><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><path d="M10.457 10.457 9 11.914"/><path d="M15 11.012 14.513 11.5"/><path d="M15.42 15.42 16.5 14.34a2 2 0 0 0-2.828 0L9 19.012l-.9-.9"/><circle cx="9" cy="9" r="2"/>
-          </svg>
-        }
-      </button>
+          PDF
+        </button>
+
+        <button class="media-toggle" (click)="toggleMedia()" [title]="showMedia() ? 'Hide Media' : 'Show Media'">
+          @if (showMedia()) {
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+            </svg>
+          } @else {
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="2" x2="22" y1="2" y2="22"/><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><path d="M10.457 10.457 9 11.914"/><path d="M15 11.012 14.513 11.5"/><path d="M15.42 15.42 16.5 14.34a2 2 0 0 0-2.828 0L9 19.012l-.9-.9"/><circle cx="9" cy="9" r="2"/>
+            </svg>
+          }
+        </button>
+      </div>
     </header>
 
     <!-- Main two-column layout -->
@@ -41,7 +54,7 @@
         @if (recipe.video?.url) {
           <div class="video-container">
             <iframe
-              [src]="getSanitizedVideoUrl(recipe.video?.url ?? null)"
+              [src]="mainVideoUrl()"
               class="video-iframe"
               frameborder="0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -50,6 +63,7 @@
           </div>
         }
 
+        <!-- ── RECIPE METADATA ─────────────────────────────────────────── -->
         <!-- Title -->
         <h1 class="recipe-title">{{ recipe.title }}</h1>
 
@@ -208,7 +222,7 @@
                     @if (recipe.instructions[currentStep()].video?.url) {
                       <div class="modal-video-container">
                         <iframe
-                          [src]="getSanitizedVideoUrl(recipe.instructions[currentStep()].video?.url ?? null)"
+                          [src]="activeVideoUrl()"
                           class="modal-video-iframe"
                           frameborder="0"
                           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -283,6 +297,64 @@
             </button>
           </div>
         }
+      </div>
+    }
+
+    <!-- PDF Preview Modal -->
+    @if (showPdfPreview()) {
+      <div class="step-modal-overlay" (click)="$event.target === $event.currentTarget && closePdfPreview()">
+        <div class="pdf-preview-modal">
+          <header class="pdf-preview-header">
+            <h2 class="section-heading" style="color: white">PDF Preview</h2>
+            <button class="modal-close" (click)="closePdfPreview()" style="position: static">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 6L6 18M6 6l12 12"/>
+              </svg>
+            </button>
+          </header>
+
+          <div class="pdf-preview-body">
+            <div class="pdf-paper" id="pdf-content">
+              <h1>{{ recipe.title }}</h1>
+              
+              <div class="meta">
+                @if (recipe.yield) { <span><strong>Yield:</strong> {{ recipe.yield }}</span> }
+                @if (recipe.prepTime) { <span><strong>Prep:</strong> {{ recipe.prepTime }}</span> }
+                @if (recipe.cookTime) { <span><strong>Cook:</strong> {{ recipe.cookTime }}</span> }
+              </div>
+
+              <h2>Ingredients</h2>
+              <ul>
+                @for (ingredient of recipe.ingredients; track $index) {
+                  <li>{{ getScaledIngredient(ingredient) }}</li>
+                }
+              </ul>
+
+              <h2>Instructions</h2>
+              <ol>
+                @for (step of recipe.instructions; track $index) {
+                  <li>{{ getStepText(step) }}</li>
+                }
+              </ol>
+
+              <div style="margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #f1f5f9; text-align: center; color: #94a3b8; font-size: 0.8rem;">
+                Generated by <strong>JomMasak</strong> - Distraction-free recipes
+              </div>
+            </div>
+          </div>
+
+          <footer class="pdf-footer">
+            <button class="modal-nav-btn" (click)="closePdfPreview()">Cancel</button>
+            <button class="pdf-download-btn" (click)="generatePdf()">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              Download PDF
+            </button>
+          </footer>
+        </div>
       </div>
     }
 

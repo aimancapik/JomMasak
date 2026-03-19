@@ -8,9 +8,9 @@
 
 /* ─── Header ─────────────────────────────────────────────────────── */
 .kitchen-header {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
   padding: 1rem 1.5rem;
   border-bottom: 1px solid rgba(255,255,255,0.06);
   background: rgba(26,26,26,0.8);
@@ -19,6 +19,15 @@
   position: sticky;
   top: 0;
   z-index: 50;
+}
+
+.header-section {
+  display: flex;
+  align-items: center;
+}
+.header-section.end {
+  justify-content: flex-end;
+  gap: 0.75rem;
 }
 
 .back-btn {
@@ -51,9 +60,7 @@
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
+  white-space: nowrap;
 }
 
 .media-toggle {
@@ -75,6 +82,225 @@
   background: rgba(251, 191, 36, 0.1);
   color: #fbbf24;
   border-color: rgba(251, 191, 36, 0.3);
+}
+
+/* ─── PDF Logo Button ────────────────────────────────────────────── */
+.pdf-logo-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: #ef4444;
+  border: none;
+  color: white;
+  padding: 0.45rem 0.75rem;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+}
+
+.pdf-logo-btn:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.3);
+}
+
+.pdf-logo-btn svg {
+  stroke-width: 3;
+}
+
+/* ─── PDF Print Preview Modal ────────────────────────────────────── */
+.pdf-preview-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  overflow-y: auto;
+  animation: modalFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pdf-preview-modal {
+  background: #1a1a1a;
+  width: 100%;
+  max-width: 800px;
+  border-radius: 24px;
+  box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+  border: 1px solid rgba(255,255,255,0.08);
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+}
+
+.pdf-preview-header {
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pdf-preview-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: white;
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.pdf-preview-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 3rem 1rem;
+  background: #111;
+}
+
+/* The Paper Simulation for PDF */
+.pdf-paper {
+  background: white;
+  color: #1e293b;
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 50px 60px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+  font-family: 'Inter', -apple-system, sans-serif;
+  line-height: 1.6;
+}
+
+.pdf-paper h1 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  margin-bottom: 1rem;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+  border-left: 5px solid #ef4444;
+  padding-left: 1.25rem;
+}
+
+.pdf-paper .meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  margin-bottom: 2.5rem;
+  padding: 1rem 0;
+  border-top: 1px solid #f1f5f9;
+  border-bottom: 1px solid #f1f5f9;
+  color: #475569;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.pdf-paper .meta span {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.pdf-paper h2 {
+  font-size: 1.1rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin: 2.5rem 0 1.25rem;
+  color: #ef4444;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.pdf-paper h2::after {
+  content: '';
+  flex: 1;
+  height: 2px;
+  background: #f1f5f9;
+}
+
+.pdf-paper ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.pdf-paper ul li {
+  padding: 0.5rem 0;
+  border-bottom: 1px dashed #f1f5f9;
+  display: flex;
+  gap: 0.75rem;
+}
+
+.pdf-paper ul li::before {
+  content: "•";
+  color: #ef4444;
+  font-weight: bold;
+}
+
+.pdf-paper ol {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  counter-reset: steps-counter;
+}
+
+.pdf-paper ol li {
+  counter-increment: steps-counter;
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.25rem 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.pdf-paper ol li::before {
+  content: counter(steps-counter);
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  background: #f8fafc;
+  color: #0f172a;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.9rem;
+  border: 1px solid #e2e8f0;
+}
+
+.pdf-paper ol li:last-child {
+  border-bottom: none;
+}
+
+.pdf-footer {
+  padding: 1.5rem 2rem;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
+.pdf-download-btn {
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .header-spacer {
