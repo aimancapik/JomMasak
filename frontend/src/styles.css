@@ -5,14 +5,41 @@
   box-sizing: border-box;
 }
 
-html, body {
+:root {
+  /* Ember Sunset Palette */
+  --primary: #f97316;       /* Vibrant Orange */
+  --primary-rgb: 249, 115, 22;
+  --accent: #fb923c;        /* Lighter Orange */
+  --accent-glow: rgba(249, 115, 22, 0.4);
+  --bg-dark: #0f0f0f;
+}
+
+html {
+  background-color: var(--bg-dark);
+}
+
+body {
   margin: 0;
   padding: 0;
-  background-color: #0f0f0f;
+  background-color: transparent;
   color: #ffffff;
   font-family: 'DM Sans', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: -10%;
+  width: 120%;
+  height: 120%;
+  background-image: url('/background.jpg');
+  background-size: cover;
+  background-position: center;
+  filter: blur(24px) brightness(0.4);
+  z-index: -1;
+  pointer-events: none;
 }
 
 /* ── Scrollbar ───────────────────────────────────────────────────────── */
@@ -27,11 +54,11 @@ html, body {
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #fbbf24;
+  background: var(--primary);
 }
 
 /* ── Selection ───────────────────────────────────────────────────────── */
 ::selection {
-  background: #fbbf2440;
-  color: #fbbf24;
+  background: rgba(var(--primary-rgb), 0.25);
+  color: var(--primary);
 }
